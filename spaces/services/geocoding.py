@@ -1,10 +1,13 @@
 import json
 import time
+import logging
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 BAN_SEARCH_URL = "https://api-adresse.data.gouv.fr/search/"
 
@@ -29,6 +32,8 @@ def _ban_search(query_text, *, limit, autocomplete, timeout_seconds, max_retries
     ban_search_url = getattr(settings, "BAN_API_SEARCH_URL", BAN_SEARCH_URL)
     request_timeout = getattr(settings, "BAN_API_TIMEOUT_SECONDS", timeout_seconds)
     
+    logger.debug(f"Geocoding query: {query_text} with URL: {ban_search_url}")
+    
     last_error = None
     last_error_detail = None
     
@@ -38,15 +43,19 @@ def _ban_search(query_text, *, limit, autocomplete, timeout_seconds, max_retries
                 f"{ban_search_url}?{query}",
                 headers={"User-Agent": "espaces-ouverts/1.0"},
             )
+            logger.debug(f"Attempt {attempt + 1}/{max_retries}: Requesting {request.full_url}")
             with urlopen(request, timeout=request_timeout) as response:
                 if response.status != 200:
                     error_detail = f"HTTP {response.status}"
+                    logger.error(f"BAN API HTTP error: {error_detail}")
                     raise RuntimeError(error_detail)
                 payload = json.loads(response.read().decode("utf-8"))
+                logger.debug(f"BAN API success: found {len(payload.get('features', []))} features")
                 return payload
         except URLError as exc:
             last_error = exc
             last_error_detail = str(exc.reason) if hasattr(exc, 'reason') else str(exc)
+            logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {last_error_detail}")
             if attempt < max_retries - 1:
                 time.sleep(1 * (attempt + 1))  # Exponential backoff
                 continue
@@ -54,6 +63,7 @@ def _ban_search(query_text, *, limit, autocomplete, timeout_seconds, max_retries
                 f"BAN API request failed (attempt {attempt + 1}/{max_retries}): {last_error_detail}"
             ) from exc
         except json.JSONDecodeError as exc:
+            logger.error(f"BAN API JSON decode error: {str(exc)}")
             raise RuntimeError(
                 f"BAN API response could not be decoded: {str(exc)}"
             ) from exc

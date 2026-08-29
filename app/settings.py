@@ -179,6 +179,28 @@ INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
+# Logging configuration
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+       "console": {
+           "class": "logging.StreamHandler",
+       },
+    },
+    "root": {
+       "handlers": ["console"],
+       "level": "INFO",
+    },
+    "loggers": {
+       "spaces.services.geocoding": {
+           "handlers": ["console"],
+           "level": "DEBUG",
+           "propagate": False,
+       },
+    },
+}
+
 # BAN (Base Adresse Nationale) geocoding settings
 BAN_API_SEARCH_URL = os.environ.get("BAN_API_SEARCH_URL", "https://api-adresse.data.gouv.fr/search/")
 BAN_API_TIMEOUT_SECONDS = int(os.environ.get("BAN_API_TIMEOUT_SECONDS", "10"))
