@@ -167,7 +167,7 @@ if env.bool('USE_S3', default=False) or env('AWS_ACCESS_KEY_ID', default=None):
             'OPTIONS': {
                 'access_key': env('AWS_ACCESS_KEY_ID', default=''),
                 'secret_key': env('AWS_SECRET_ACCESS_KEY', default=''),
-                'storage_bucket_name': AWS_STORAGE_BUCKET_NAME,
+                'bucket_name': AWS_STORAGE_BUCKET_NAME,
                 'region_name': AWS_S3_REGION_NAME,
                 'custom_domain': AWS_S3_CUSTOM_DOMAIN,
                 'endpoint_url': AWS_S3_ENDPOINT_URL,
