@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "Espaces Ouverts - Association Directory",
   "private": true,
+  "workspaces": ["theme/static_src"],
   "scripts": {
-    "postinstall": "cd theme/static_src && npm ci && npm run build"
+    "postinstall": "cd theme/static_src && npm run build"
   },
   "engines": {
     "node": "24.x",
