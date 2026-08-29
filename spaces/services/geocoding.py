@@ -1,4 +1,5 @@
 import json
+import time
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -17,7 +18,7 @@ def _extract_department_info(context):
     return parts[0], parts[1], parts[2]
 
 
-def _ban_search(query_text, *, limit, autocomplete, timeout_seconds):
+def _ban_search(query_text, *, limit, autocomplete, timeout_seconds, max_retries=3):
     query = urlencode(
         {
             "q": query_text,
@@ -27,24 +28,48 @@ def _ban_search(query_text, *, limit, autocomplete, timeout_seconds):
     )
     ban_search_url = getattr(settings, "BAN_API_SEARCH_URL", BAN_SEARCH_URL)
     request_timeout = getattr(settings, "BAN_API_TIMEOUT_SECONDS", timeout_seconds)
-    request = Request(
-        f"{ban_search_url}?{query}",
-        headers={"User-Agent": "espaces-ouverts/1.0"},
-    )
-    try:
-        with urlopen(request, timeout=request_timeout) as response:
-            if response.status != 200:
-                raise RuntimeError(
-                    f"BAN API request failed with status {response.status} for query: {query_text}"
-                )
-            payload = json.loads(response.read().decode("utf-8"))
-    except URLError as exc:
-        raise RuntimeError(f"BAN API request failed for query: {query_text}") from exc
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(
-            f"BAN API response could not be decoded for query: {query_text}"
-        ) from exc
-    return payload
+    
+    last_error = None
+    last_error_detail = None
+    
+    for attempt in range(max_retries):
+        try:
+            request = Request(
+                f"{ban_search_url}?{query}",
+                headers={"User-Agent": "espaces-ouverts/1.0"},
+            )
+            with urlopen(request, timeout=request_timeout) as response:
+                if response.status != 200:
+                    error_detail = f"HTTP {response.status}"
+                    raise RuntimeError(error_detail)
+                payload = json.loads(response.read().decode("utf-8"))
+                return payload
+        except URLError as exc:
+            last_error = exc
+            last_error_detail = str(exc.reason) if hasattr(exc, 'reason') else str(exc)
+            if attempt < max_retries - 1:
+                time.sleep(1 * (attempt + 1))  # Exponential backoff
+                continue
+            raise RuntimeError(
+                f"BAN API request failed (attempt {attempt + 1}/{max_retries}): {last_error_detail}"
+            ) from exc
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                f"BAN API response could not be decoded: {str(exc)}"
+            ) from exc
+        except RuntimeError as exc:
+            last_error = exc
+            last_error_detail = str(exc)
+            if attempt < max_retries - 1:
+                time.sleep(1 * (attempt + 1))
+                continue
+            raise RuntimeError(
+                f"BAN API request failed (attempt {attempt + 1}/{max_retries}): {last_error_detail}"
+            ) from exc
+    
+    raise RuntimeError(
+        f"BAN API request failed after {max_retries} attempts: {last_error_detail}"
+    ) from last_error
 
 
 def geocode_address_with_ban(address_query, *, timeout_seconds=5):

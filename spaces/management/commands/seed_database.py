@@ -438,9 +438,13 @@ class Command(BaseCommand):
             except RuntimeError as exc:
                 self.stdout.write(
                     self.style.WARNING(
-                        f"  ⚠ BAN geocoding failed for {ch.name}: {exc}"
-                    )
-                )
+                       f"  ⚠ BAN geocoding failed for {ch.name}\n"
+                       f"     Address: {ch.address}\n"
+                       f"     Error: {exc}\n"
+                       f"     Note: Care home created without geocoding. You can retry with:\n"
+                       f"     python manage.py shell -c \"from spaces.models import CareHome; CareHome.objects.get(name='{ch.name}').refresh_address_details_from_ban(save=True)\""
+                   )
+               )
             care_home_objects[ch_data["name"]] = ch
             self.stdout.write(f"  ✓ Created: {ch.name}")
 
