@@ -27,6 +27,7 @@ dependencies = [
     "gunicorn",
     "whitenoise",
     "dj-static",
+    "geopy>=2.4.0",
 ]
 
 [build-system]
@@ -38,4 +39,3 @@ py-modules = []
 
 [tool.setuptools.packages.find]
 where = []
-

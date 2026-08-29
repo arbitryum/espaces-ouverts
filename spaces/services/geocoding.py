@@ -1,218 +1,159 @@
-import json
-import time
-import logging
-from urllib.error import URLError
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+"""
+Geocoding service using geopy for BAN (Base Adresse Nationale) API support.
 
-from django.conf import settings
+For French addresses, we use the Nominatim geocoder with a user agent and
+timeouts configured appropriately for production use.
+"""
+import logging
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 
 logger = logging.getLogger(__name__)
 
-BAN_SEARCH_URL = "https://api-adresse.data.gouv.fr/search/"
+
+def get_geocoder():
+    """Get a Nominatim geocoder instance configured for BAN/French addresses."""
+    return Nominatim(
+        user_agent="espaces-ouverts/1.0",
+        timeout=10,
+    )
 
 
-def _extract_department_info(context):
-    parts = [part.strip() for part in context.split(",") if part.strip()]
-    if len(parts) < 2:
-        return "", "", ""
-    if len(parts) < 3:
-        return parts[0], parts[1], ""
-    return parts[0], parts[1], parts[2]
-
-
-def _ban_search(query_text, *, limit, autocomplete, timeout_seconds, max_retries=3):
-    query = urlencode(
-        {
-            "q": query_text,
-            "limit": limit,
-            "autocomplete": autocomplete,
+def geocode_address_with_ban(address_query):
+    """
+    Geocode an address using Nominatim (which supports BAN addresses in France).
+    
+    Args:
+        address_query: The address to geocode
+        
+    Returns:
+        A dictionary with geocoding results including coordinates, or None if not found
+    """
+    if not address_query or not address_query.strip():
+        return None
+    
+    try:
+        geocoder = get_geocoder()
+        logger.debug(f"Geocoding address: {address_query}")
+        
+        location = geocoder.geocode(address_query)
+        
+        if not location:
+            logger.warning(f"No geocoding result found for: {address_query}")
+            return None
+        
+        logger.debug(f"Geocoding successful for {address_query}: ({location.latitude}, {location.longitude})")
+        
+        # Extract address components from the raw address string
+        raw_address_parts = location.address.split(",")
+        
+        return {
+            "label": location.address,
+            "latitude": location.latitude,
+            "longitude": location.longitude,
+            "raw_address": address_query,
         }
-    )
-    ban_search_url = getattr(settings, "BAN_API_SEARCH_URL", BAN_SEARCH_URL)
-    request_timeout = getattr(settings, "BAN_API_TIMEOUT_SECONDS", timeout_seconds)
+        
+    except GeocoderTimedOut:
+        logger.error(f"Geocoding timeout for: {address_query}")
+        raise RuntimeError(f"Geocoding service timed out for: {address_query}")
+    except GeocoderServiceError as exc:
+        logger.error(f"Geocoding service error for {address_query}: {exc}")
+        raise RuntimeError(f"Geocoding service error: {exc}")
+    except Exception as exc:
+        logger.error(f"Unexpected geocoding error for {address_query}: {exc}")
+        raise RuntimeError(f"Unexpected geocoding error: {exc}")
+
+
+def resolve_location_query_with_ban(location_query, *, limit=10):
+    """
+    Search for locations matching a query (autocomplete style).
     
-    logger.debug(f"Geocoding query: {query_text} with URL: {ban_search_url}")
+    Args:
+        location_query: The search query
+        limit: Maximum number of results
+        
+    Returns:
+        A dictionary with search terms, or None if not found
+    """
+    if not location_query or not location_query.strip():
+        return None
     
-    last_error = None
-    last_error_detail = None
+    try:
+        geocoder = get_geocoder()
+        logger.debug(f"Searching locations for: {location_query}")
+        
+        locations = geocoder.geocode(location_query, exactly_one=False, timeout=10)
+        
+        if not locations:
+            logger.warning(f"No locations found for: {location_query}")
+            return None
+        
+        # Limit results
+        locations = locations[:limit]
+        
+        terms = set()
+        for location in locations:
+            if location.address:
+                terms.add(location.address)
+                # Add city/postal components
+                parts = location.address.split(",")
+                for part in parts:
+                    part = part.strip()
+                    if part:
+                        terms.add(part)
+        
+        return {"terms": sorted(list(terms))}
+        
+    except (GeocoderTimedOut, GeocoderServiceError) as exc:
+        logger.error(f"Geocoding service error for {location_query}: {exc}")
+        raise RuntimeError(f"Geocoding service error: {exc}")
+    except Exception as exc:
+        logger.error(f"Unexpected geocoding error for {location_query}: {exc}")
+        raise RuntimeError(f"Unexpected geocoding error: {exc}")
+
+
+def search_locations_with_ban(location_query, *, limit=6):
+    """
+    Search for locations with structured results.
     
-    for attempt in range(max_retries):
-        try:
-            request = Request(
-                f"{ban_search_url}?{query}",
-                headers={"User-Agent": "espaces-ouverts/1.0"},
-            )
-            logger.debug(f"Attempt {attempt + 1}/{max_retries}: Requesting {request.full_url}")
-            with urlopen(request, timeout=request_timeout) as response:
-                if response.status != 200:
-                    error_detail = f"HTTP {response.status}"
-                    logger.error(f"BAN API HTTP error: {error_detail}")
-                    raise RuntimeError(error_detail)
-                payload = json.loads(response.read().decode("utf-8"))
-                logger.debug(f"BAN API success: found {len(payload.get('features', []))} features")
-                return payload
-        except URLError as exc:
-            last_error = exc
-            last_error_detail = str(exc.reason) if hasattr(exc, 'reason') else str(exc)
-            logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {last_error_detail}")
-            if attempt < max_retries - 1:
-                time.sleep(1 * (attempt + 1))  # Exponential backoff
-                continue
-            raise RuntimeError(
-                f"BAN API request failed (attempt {attempt + 1}/{max_retries}): {last_error_detail}"
-            ) from exc
-        except json.JSONDecodeError as exc:
-            logger.error(f"BAN API JSON decode error: {str(exc)}")
-            raise RuntimeError(
-                f"BAN API response could not be decoded: {str(exc)}"
-            ) from exc
-        except RuntimeError as exc:
-            last_error = exc
-            last_error_detail = str(exc)
-            if attempt < max_retries - 1:
-                time.sleep(1 * (attempt + 1))
-                continue
-            raise RuntimeError(
-                f"BAN API request failed (attempt {attempt + 1}/{max_retries}): {last_error_detail}"
-            ) from exc
-    
-    raise RuntimeError(
-        f"BAN API request failed after {max_retries} attempts: {last_error_detail}"
-    ) from last_error
-
-
-def geocode_address_with_ban(address_query, *, timeout_seconds=5):
-    normalized_query = " ".join(address_query.split())
-    if not normalized_query:
-        return None
-
-    payload = _ban_search(
-        normalized_query,
-        limit=1,
-        autocomplete=0,
-        timeout_seconds=timeout_seconds,
-    )
-
-    features = payload.get("features") or []
-    if not features:
-        return None
-
-    first_feature = features[0]
-    properties = first_feature.get("properties") or {}
-    geometry = first_feature.get("geometry") or {}
-    coordinates = geometry.get("coordinates") or [None, None]
-    longitude, latitude = coordinates[0], coordinates[1]
-
-    department_code, department_name, region_name = _extract_department_info(
-        properties.get("context", "")
-    )
-
-    return {
-        "label": properties.get("label", ""),
-        "city": properties.get("city", ""),
-        "postal_code": properties.get("postcode", ""),
-        "city_code": properties.get("citycode", ""),
-        "department_code": department_code,
-        "department_name": department_name,
-        "region_name": region_name,
-        "latitude": latitude,
-        "longitude": longitude,
-        "ban_id": properties.get("id", ""),
-        "ban_score": properties.get("score"),
-    }
-
-
-def resolve_location_query_with_ban(location_query, *, timeout_seconds=5, limit=10):
-    normalized_query = " ".join(location_query.split())
-    if not normalized_query:
-        return None
-
-    payload = _ban_search(
-        normalized_query,
-        limit=limit,
-        autocomplete=1,
-        timeout_seconds=timeout_seconds,
-    )
-    features = payload.get("features") or []
-    if not features:
-        return None
-
-    terms = set()
-    for feature in features:
-        properties = feature.get("properties") or {}
-        department_code, department_name, region_name = _extract_department_info(
-            properties.get("context", "")
-        )
-        for term in (
-            properties.get("label", ""),
-            properties.get("name", ""),
-            properties.get("city", ""),
-            properties.get("postcode", ""),
-            properties.get("citycode", ""),
-            department_code,
-            department_name,
-            region_name,
-        ):
-            if term:
-                terms.add(term)
-
-    return {"terms": sorted(terms)}
-
-
-def search_locations_with_ban(location_query, *, timeout_seconds=5, limit=6):
-    normalized_query = " ".join(location_query.split())
-    if not normalized_query:
+    Args:
+        location_query: The search query
+        limit: Maximum number of results
+        
+    Returns:
+        A list of location suggestions with coordinates
+    """
+    if not location_query or not location_query.strip():
         return []
-
-    payload = _ban_search(
-        normalized_query,
-        limit=limit,
-        autocomplete=1,
-        timeout_seconds=timeout_seconds,
-    )
-    features = payload.get("features") or []
-    suggestions = []
-    for feature in features:
-        properties = feature.get("properties") or {}
-        geometry = feature.get("geometry") or {}
-        coordinates = geometry.get("coordinates") or [None, None]
-        longitude, latitude = coordinates[0], coordinates[1]
-        department_code, department_name, region_name = _extract_department_info(
-            properties.get("context", "")
-        )
-        suggestions.append(
-            {
-                "label": properties.get("label", ""),
-                "name": properties.get("name", ""),
-                "city": properties.get("city", ""),
-                "postcode": properties.get("postcode", ""),
-                "type": properties.get("type", ""),
-                "department_code": department_code,
-                "department_name": department_name,
-                "region_name": region_name,
-                "latitude": latitude,
-                "longitude": longitude,
-                "score": properties.get("score", 0),
-            }
-        )
-
-    type_priority = {
-        "municipality": 0,
-        "city": 0,
-        "locality": 1,
-        "postcode": 2,
-        "street": 3,
-        "housenumber": 4,
-    }
-    suggestions.sort(
-        key=lambda item: (
-            type_priority.get(item.get("type", ""), 9),
-            -float(item.get("score") or 0),
-        )
-    )
-
-    for suggestion in suggestions:
-        suggestion.pop("score", None)
-
-    return suggestions
+    
+    try:
+        geocoder = get_geocoder()
+        logger.debug(f"Searching locations for: {location_query}")
+        
+        locations = geocoder.geocode(location_query, exactly_one=False, timeout=10)
+        
+        if not locations:
+            logger.warning(f"No locations found for: {location_query}")
+            return []
+        
+        # Limit results
+        locations = locations[:limit]
+        
+        suggestions = []
+        for location in locations:
+            suggestions.append({
+                "label": location.address,
+                "latitude": location.latitude,
+                "longitude": location.longitude,
+                "name": location.address.split(",")[0] if location.address else "",
+            })
+        
+        return suggestions
+        
+    except (GeocoderTimedOut, GeocoderServiceError) as exc:
+        logger.error(f"Geocoding service error for {location_query}: {exc}")
+        return []
+    except Exception as exc:
+        logger.error(f"Unexpected geocoding error for {location_query}: {exc}")
+        return []
