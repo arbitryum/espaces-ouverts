@@ -1,0 +1,28 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+asgiref = "==3.12.1"
+Django = "==6.1"
+django-debug-toolbar = "==7.1.1"
+psycopg = ">=3.3.4"
+psycopg-binary = ">=3.3.4"
+psycopg-pool = ">=3.3.1"
+sqlparse = "==0.6.0"
+typing-extensions = "==4.16.0"
+django-tailwind-4 = "==0.1.4"
+django-browser-reload = "==1.21.0"
+django-storages = {version = "==1.14.4", extras = ["s3"]}
+boto3 = ">=1.35.0"
+pillow = ">=10.4.0"
+django-environ = "*"
+gunicorn = "*"
+whitenoise = "*"
+dj-static = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.13"
