@@ -201,6 +201,8 @@ LOGGING = {
     },
 }
 
-# BAN (Base Adresse Nationale) geocoding settings
-BAN_API_SEARCH_URL = os.environ.get("BAN_API_SEARCH_URL", "https://api-adresse.data.gouv.fr/search/")
-BAN_API_TIMEOUT_SECONDS = int(os.environ.get("BAN_API_TIMEOUT_SECONDS", "10"))
+# Geocoding settings
+# The geocoding service uses geopy with Nominatim geocoder (OpenStreetMap-based)
+# This supports French addresses and doesn't require external API registration
+GEOCODING_TIMEOUT_SECONDS = int(os.environ.get("GEOCODING_TIMEOUT_SECONDS", "10"))
+
