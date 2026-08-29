@@ -1,0 +1,16 @@
+{
+  "name": "espaces-ouverts",
+  "version": "1.0.0",
+  "description": "Espaces Ouverts - Association Directory",
+  "scripts": {
+    "postinstall": "cd theme/static_src && npm install && npm run build",
+    "build": "cd theme/static_src && npm run build"
+  },
+  "workspaces": [
+    "theme/static_src"
+  ],
+  "engines": {
+    "node": "20.x",
+    "npm": "10.x"
+  }
+}
