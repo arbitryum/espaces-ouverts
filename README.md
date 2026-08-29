@@ -11,9 +11,9 @@ The project is currently a Django prototype. The main models are:
 
 ## Requirements
 
-- Python 3.14 or a version compatible with Django 6.1;
-- PostgreSQL running locally;
-- a terminal opened at the project root.
+- Python 3.13+ (managed via [mise](https://mise.jdx.dev/) if available)
+- Node.js 20+ (managed via mise)
+- PostgreSQL running locally
 
 The current configuration uses the PostgreSQL database
 `espaces_ouverts_development` on `localhost`, with the default local
@@ -22,19 +22,31 @@ necessary.
 
 ## Installation
 
-Create and activate the virtual environment:
+### Using mise (recommended)
+
+If you have [mise](https://mise.jdx.dev/) installed, it will automatically install the correct Python and Node.js versions:
 
 ```sh
-python3 -m venv .venv
+mise install
+```
+
+### Using uv for Python dependencies
+
+Install Python dependencies using [uv](https://docs.astral.sh/uv/):
+
+```sh
+uv sync
+```
+
+This creates a virtual environment and installs all dependencies from `pyproject.toml` and `uv.lock`.
+
+Activate the virtual environment:
+
+```sh
 source .venv/bin/activate
 ```
 
-Install the Python dependencies listed in `requirements.txt`:
-
-```sh
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
+### Setup the database
 
 Create the PostgreSQL database if it does not already exist:
 
@@ -48,9 +60,15 @@ Apply the migrations:
 python manage.py migrate
 ```
 
+Seed the database with example data:
+
+```sh
+python manage.py seed_database
+```
+
 ## Start the project
 
-Start the Django development server:
+### Terminal 1: Django development server
 
 ```sh
 python manage.py runserver
@@ -66,37 +84,28 @@ Create an administrator account:
 python manage.py createsuperuser
 ```
 
-## CSS development
-
-The Tailwind CSS files are located in `static/css/`.
-
-To generate the CSS and automatically regenerate it whenever `input.css` is
-modified:
+### Terminal 2: Tailwind CSS development watcher
 
 ```sh
-./static/css/tailwindcss \
-	-i static/css/input.css \
-	-o static/css/output.css \
-	--watch
+cd theme/static_src
+npm run dev
 ```
 
-To generate the file once, for example in CI/CD:
+This watches for changes in `src/styles.css` and automatically regenerates the CSS.
 
-```sh
-./static/css/tailwindcss \
-	-i static/css/input.css \
-	-o static/css/output.css
-```
+## Deployment to Scalingo
 
-During development, run Django and Tailwind in two separate terminals.
+The application is deployed to Scalingo using:
+- Node.js buildpack (for Tailwind CSS compilation)
+- Python buildpack (for Django application)
+
+Deployment automatically:
+1. Installs Node.js dependencies and builds Tailwind CSS
+2. Installs Python dependencies using uv
+3. Runs database migrations
+4. Collects static files
 
 ## Useful commands
-
-Update `requirements.txt` from the currently active virtual environment:
-
-```sh
-python -m pip freeze > requirements.txt
-```
 
 Check the Django configuration:
 
@@ -123,13 +132,22 @@ Open a Django shell:
 python manage.py shell
 ```
 
-The available routes are defined in `app/urls.py` and `spaces/urls.py`.
+Update Python dependencies (after changing `pyproject.toml`):
+
+```sh
+uv lock
+```
 
 ## Main structure
 
 ```text
-app/            Django project configuration
-spaces/         Application code and models
-static/css/     Tailwind CSS source and output files
-manage.py       Django administration command
+app/                  Django project configuration
+spaces/               Application code and models
+theme/static_src/     Tailwind CSS source (Node.js + npm)
+static/               Generated CSS and static files
+bin/                  Deployment scripts
+manage.py             Django administration command
+pyproject.toml        Python project configuration and dependencies
+uv.lock               Lockfile for reproducible Python dependency resolution
 ```
+
