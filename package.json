@@ -4,7 +4,7 @@
   "description": "Espaces Ouverts - Association Directory",
   "private": true,
   "scripts": {
-    "postinstall": "cd theme/static_src && npm install && npm run build"
+    "postinstall": "npm install --prefix theme/static_src && npm run build --prefix theme/static_src"
   },
   "engines": {
     "node": "24.x",
