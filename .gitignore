@@ -31,6 +31,10 @@ ENV/
 env.bak/
 venv.bak/
 
+# Dependency Management
+Pipfile
+Pipfile.lock
+
 # IDE
 .vscode/
 .idea/
@@ -84,3 +88,4 @@ yarn-error.log
 *.tmp
 *.temp
 .tmp/
+
