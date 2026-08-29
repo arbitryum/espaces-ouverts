@@ -34,7 +34,7 @@ SECRET_KEY = env.str('SECRET_KEY', default='django-insecure-1igr39^=md(a#ldh)jj3
 DEBUG = env.bool('DEBUG', default=True)
 
 # Allow hosts - set via environment variable or use defaults
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost', '*.scalingo.io', 'espaces-ouverts-production.osc-fr1.scalingo.io'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost', '*.scalingo.io', '*.arbitryum.fr', 'espaces-ouverts-production.osc-fr1.scalingo.io'])
 
 # Required for OpenStreetMap tile policy: send origin referrer on cross-origin tile requests.
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
