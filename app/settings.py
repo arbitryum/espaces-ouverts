@@ -152,19 +152,57 @@ static_dir = BASE_DIR / "static"
 if static_dir.exists():
     STATICFILES_DIRS.append(static_dir)
 
-# WhiteNoise configuration for serving static files
-STORAGES = {
-    'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
-    },
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+# File Storage Configuration
+# Use S3 in production (when AWS credentials are configured), local storage in development
+if env.bool('USE_S3', default=False) or env('AWS_ACCESS_KEY_ID', default=None):
+    # S3 Storage Configuration
+    AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME', default='')
+    AWS_S3_REGION_NAME = env('AWS_S3_REGION_NAME', default='us-east-1')
+    AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN', default=None)
+    AWS_S3_ENDPOINT_URL = env('AWS_S3_ENDPOINT_URL', default=None)
+    
+    STORAGES = {
+        'default': {
+            'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+            'OPTIONS': {
+                'access_key': env('AWS_ACCESS_KEY_ID', default=''),
+                'secret_key': env('AWS_SECRET_ACCESS_KEY', default=''),
+                'storage_bucket_name': AWS_STORAGE_BUCKET_NAME,
+                'region_name': AWS_S3_REGION_NAME,
+                'custom_domain': AWS_S3_CUSTOM_DOMAIN,
+                'endpoint_url': AWS_S3_ENDPOINT_URL,
+                'use_ssl': env.bool('AWS_S3_USE_SSL', default=True),
+            },
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        }
     }
-}
-
-# Media Files Configuration
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+    # S3 URLs for media files
+    if AWS_S3_CUSTOM_DOMAIN:
+        MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
+    elif AWS_S3_ENDPOINT_URL:
+        MEDIA_URL = env(
+            'MEDIA_URL',
+            default=f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}/media/",
+        )
+    else:
+        MEDIA_URL = env('MEDIA_URL', default=f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/media/")
+    # MEDIA_ROOT is not used with S3, but set for Django compatibility
+    MEDIA_ROOT = BASE_DIR / 'media'
+else:
+    # Local File Storage (Development)
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        }
+    }
+    # Media Files Configuration
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
@@ -205,4 +243,3 @@ LOGGING = {
 # The geocoding service uses geopy with Nominatim geocoder (OpenStreetMap-based)
 # This supports French addresses and doesn't require external API registration
 GEOCODING_TIMEOUT_SECONDS = int(os.environ.get("GEOCODING_TIMEOUT_SECONDS", "10"))
-

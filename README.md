@@ -105,6 +105,48 @@ Deployment automatically:
 3. Runs database migrations
 4. Collects static files
 
+### File Storage Configuration
+
+#### Development (Local Storage)
+
+By default, uploaded files (images) are stored locally in the `media/` directory.
+
+#### Production (S3 or S3-Compatible Storage)
+
+To enable S3 storage in production, set the following environment variables:
+
+```bash
+# Enable S3 storage
+USE_S3=True
+
+# AWS S3 credentials and bucket configuration
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+AWS_STORAGE_BUCKET_NAME=your-bucket-name
+AWS_S3_REGION_NAME=eu-west-1
+
+# Optional: for S3-compatible services (MinIO, DigitalOcean Spaces, etc.)
+AWS_S3_ENDPOINT_URL=https://your-endpoint.example.com
+AWS_S3_USE_SSL=True
+
+# Optional: custom CDN domain for serving files
+AWS_S3_CUSTOM_DOMAIN=cdn.example.com
+```
+
+For Scaleway Object Storage specifically:
+
+```bash
+USE_S3=True
+AWS_ACCESS_KEY_ID=SCWXXXXXXXXXXXXXXXXX
+AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+AWS_STORAGE_BUCKET_NAME=your-bucket-name
+AWS_S3_REGION_NAME=fr-par
+AWS_S3_ENDPOINT_URL=https://s3.fr-par.scw.cloud
+AWS_S3_USE_SSL=True
+```
+
+The `SpaceImage` model will automatically use the configured storage backend. Images uploaded in production will be stored on S3, while development uses the local filesystem.
+
 ## Useful commands
 
 Check the Django configuration:
@@ -150,4 +192,3 @@ manage.py             Django administration command
 pyproject.toml        Python project configuration and dependencies
 uv.lock               Lockfile for reproducible Python dependency resolution
 ```
-
