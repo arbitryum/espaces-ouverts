@@ -53,8 +53,8 @@ Pipfile.lock
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-/media
-media/
+# /media
+# media/
 staticfiles/
 /staticfiles
 
@@ -88,4 +88,3 @@ yarn-error.log
 *.tmp
 *.temp
 .tmp/
-
