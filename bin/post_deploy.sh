@@ -1,11 +1,9 @@
 #!/bin/bash
 set -e
 
-# Install Node.js dependencies for Tailwind CSS
+# Install Node.js dependencies via django-tailwind
 echo "Installing Node.js dependencies..."
-if [ -d "theme/static_src" ]; then
-    cd theme/static_src && npm install && cd - > /dev/null
-fi
+python manage.py tailwind install
 
 # Compile Tailwind CSS
 echo "Compiling Tailwind CSS..."
