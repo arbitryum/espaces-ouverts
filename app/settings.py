@@ -94,7 +94,7 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 DATABASES = {
-    'default': env.db('DATABASE_URL', default=f'postgresql://localhost/espaces_ouverts_development')
+    'default': env.db('DATABASE_URL', default='sqlite:///db.sqlite3')
 }
 
 
@@ -135,9 +135,11 @@ USE_TZ = True
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = '/static/'
 
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-]
+# Only include static directory if it exists (for development)
+STATICFILES_DIRS = []
+static_dir = BASE_DIR / "static"
+if static_dir.exists():
+    STATICFILES_DIRS.append(static_dir)
 
 # WhiteNoise configuration for serving static files
 STORAGES = {
