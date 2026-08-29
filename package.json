@@ -1,0 +1,10 @@
+{
+  "name": "espaces-ouverts",
+  "version": "1.0.0",
+  "description": "Espaces Ouverts - Association Directory",
+  "private": true,
+  "engines": {
+    "node": "20.x",
+    "npm": "10.x"
+  }
+}
