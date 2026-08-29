@@ -46,8 +46,6 @@ INSTALLED_APPS = [
     'spaces.apps.SpacesConfig',
     'tailwind',
     'theme',
-    'django_browser_reload',
-    'debug_toolbar',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -56,20 +54,32 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
+# Add debug tools only in development
+if DEBUG:
+    INSTALLED_APPS.extend([
+        'django_browser_reload',
+        'debug_toolbar',
+    ])
+
 TAILWIND_APP_NAME = 'theme'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django_browser_reload.middleware.BrowserReloadMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
+
+# Add debug middleware only in development
+if DEBUG:
+    MIDDLEWARE.extend([
+        'django_browser_reload.middleware.BrowserReloadMiddleware',
+        'debug_toolbar.middleware.DebugToolbarMiddleware',
+    ])
 
 ROOT_URLCONF = 'app.urls'
 
