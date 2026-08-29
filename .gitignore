@@ -51,8 +51,8 @@ db.sqlite3
 db.sqlite3-journal
 /media
 media/
-/static
-static/
+staticfiles/
+/staticfiles
 
 # Environment Variables
 .env
