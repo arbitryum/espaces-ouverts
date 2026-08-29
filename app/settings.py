@@ -12,6 +12,13 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 import os
 from pathlib import Path
+import environ
+
+# Initialize environment variables
+env = environ.Env()
+env_path = Path(__file__).resolve().parent.parent / '.env'
+if env_path.is_file():
+    environ.Env.read_env(str(env_path))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,12 +28,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-1igr39^=md(a#ldh)jj3t*cmf5ad8e84+w6zb&b73d67@r+qs3'
+SECRET_KEY = env.str('SECRET_KEY', default='django-insecure-1igr39^=md(a#ldh)jj3t*cmf5ad8e84+w6zb&b73d67@r+qs3')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool('DEBUG', default=True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost'])
 
 # Required for OpenStreetMap tile policy: send origin referrer on cross-origin tile requests.
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
@@ -51,8 +58,9 @@ INSTALLED_APPS = [
 TAILWIND_APP_NAME = 'theme'
 
 MIDDLEWARE = [
-    'django_browser_reload.middleware.BrowserReloadMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django_browser_reload.middleware.BrowserReloadMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -86,12 +94,7 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'espaces_ouverts_development',
-        'HOST': 'localhost',
-        'PORT': '',
-    }
+    'default': env.db('DATABASE_URL', default=f'postgresql://localhost/espaces_ouverts_development')
 }
 
 
@@ -129,45 +132,26 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
-# Media Files Configuration
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# WhiteNoise configuration for serving static files
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    }
+}
 
-# Storage Configuration - Local development, S3 for production
-if os.environ.get('USE_S3') == 'True':
-    # AWS S3 Configuration for production
-    STORAGES = {
-        'default': {
-            'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
-            'OPTIONS': {
-                'bucket_name': os.environ.get('AWS_STORAGE_BUCKET_NAME', 'espaces-ouverts'),
-                'region_name': os.environ.get('AWS_S3_REGION_NAME', 'us-east-1'),
-                'access_key': os.environ.get('AWS_ACCESS_KEY_ID'),
-                'secret_key': os.environ.get('AWS_SECRET_ACCESS_KEY'),
-            }
-        },
-        'staticfiles': {
-            'BACKEND': 'storages.backends.s3boto3.S3StaticStorage',
-        }
-    }
-    STATIC_URL = f"https://{os.environ.get('AWS_STORAGE_BUCKET_NAME', 'espaces-ouverts')}.s3.{os.environ.get('AWS_S3_REGION_NAME', 'us-east-1')}.amazonaws.com/static/"
-    MEDIA_URL = f"https://{os.environ.get('AWS_STORAGE_BUCKET_NAME', 'espaces-ouverts')}.s3.{os.environ.get('AWS_S3_REGION_NAME', 'us-east-1')}.amazonaws.com/media/"
-else:
-    # Local storage for development
-    STORAGES = {
-        'default': {
-            'BACKEND': 'django.core.files.storage.FileSystemStorage',
-        },
-        'staticfiles': {
-            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
-        }
-    }
+# Media Files Configuration
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
