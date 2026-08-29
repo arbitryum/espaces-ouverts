@@ -4,7 +4,7 @@
   "description": "Espaces Ouverts - Association Directory",
   "private": true,
   "engines": {
-    "node": "22.x",
+    "node": "24.x",
     "npm": "10.x"
   }
 }
