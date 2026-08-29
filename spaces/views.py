@@ -1,8 +1,8 @@
 from math import asin, cos, radians, sin, sqrt
 
 from django.contrib import messages
-from django.http import Http404, HttpResponse, JsonResponse
 from django.db.models import Q
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template import loader
 from django.urls import reverse
@@ -10,7 +10,8 @@ from django.utils import timezone
 from django.views import generic
 
 from spaces.models import CareHome, Space, normalize_for_search
-from spaces.services.geocoding import resolve_location_query_with_ban, search_locations_with_ban
+from spaces.services.geocoding import (resolve_location_query_with_ban,
+                                       search_locations_with_ban)
 
 
 class IndexView(generic.ListView):
@@ -82,7 +83,7 @@ class IndexView(generic.ListView):
     def get_queryset(self):
         """Return published spaces, optionally filtered by location and care home."""
         queryset = (
-            Space.objects.filter(pub_date__lte=timezone.now())
+            Space.objects.filter(pub_date__lte=timezone.now(), status="available")
             .select_related("care_home", "care_home__address_details")
             .prefetch_related("images")
             .order_by("-pub_date")
@@ -120,7 +121,7 @@ class IndexView(generic.ListView):
                             location_filter |= Q(
                                 care_home__address_details__search_text__icontains=normalized_term
                             )
-                    queryset = Space.objects.filter(pub_date__lte=timezone.now()).select_related("care_home").order_by("-pub_date")
+                    queryset = Space.objects.filter(pub_date__lte=timezone.now(), status="available").select_related("care_home").order_by("-pub_date")
                     if care_home_id:
                         queryset = queryset.filter(care_home_id=care_home_id)
                     queryset = queryset.filter(location_filter)
