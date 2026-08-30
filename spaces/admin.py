@@ -1,15 +1,22 @@
 from django.contrib import admin
 from django.contrib import messages
 
-from .models import Address, CareHome, Space, SpaceImage
+from .models import Address, CareHome, RecurringAvailability, Space, SpaceImage
 
 
 class SpaceImageInline(admin.StackedInline):
     model = SpaceImage
     # extra = 3
 
+
+class RecurringAvailabilityInline(admin.TabularInline):
+    model = RecurringAvailability
+    extra = 1
+
 class SpaceAdmin(admin.ModelAdmin):
-    inlines = [SpaceImageInline]
+    inlines = [SpaceImageInline, RecurringAvailabilityInline]
+    list_display = ("name", "care_home", "status", "publication_status", "pub_date")
+    list_filter = ("status", "publication_status")
 
 
 @admin.register(CareHome)

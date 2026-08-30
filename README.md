@@ -66,6 +66,12 @@ Seed the database with example data:
 python manage.py seed_database
 ```
 
+Seed the coworking directory with sample published and draft projects:
+
+```sh
+python manage.py seed_coworking
+```
+
 ## Start the project
 
 ### Terminal 1: Django development server

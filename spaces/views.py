@@ -83,7 +83,11 @@ class IndexView(generic.ListView):
     def get_queryset(self):
         """Return published spaces, optionally filtered by location and care home."""
         queryset = (
-            Space.objects.filter(pub_date__lte=timezone.now(), status="available")
+            Space.objects.filter(
+                pub_date__lte=timezone.now(),
+                status="available",
+                publication_status="published",
+            )
             .select_related("care_home", "care_home__address_details")
             .prefetch_related("images")
             .order_by("-pub_date")
@@ -121,7 +125,11 @@ class IndexView(generic.ListView):
                             location_filter |= Q(
                                 care_home__address_details__search_text__icontains=normalized_term
                             )
-                    queryset = Space.objects.filter(pub_date__lte=timezone.now(), status="available").select_related("care_home").order_by("-pub_date")
+                    queryset = Space.objects.filter(
+                        pub_date__lte=timezone.now(),
+                        status="available",
+                        publication_status="published",
+                    ).select_related("care_home").order_by("-pub_date")
                     if care_home_id:
                         queryset = queryset.filter(care_home_id=care_home_id)
                     queryset = queryset.filter(location_filter)
@@ -141,7 +149,11 @@ class IndexView(generic.ListView):
         map_params["view_mode"] = "map"
 
         context["care_home_options"] = (
-            CareHome.objects.filter(space__pub_date__lte=timezone.now())
+            CareHome.objects.filter(
+                space__pub_date__lte=timezone.now(),
+                space__status="available",
+                space__publication_status="published",
+            )
             .distinct()
             .order_by("name")
         )
@@ -201,7 +213,10 @@ class DetailView(generic.DetailView):
         """
         Excludes any spaces that aren't published yet.
         """
-        return Space.objects.filter(pub_date__lte=timezone.now())
+        return Space.objects.filter(
+            pub_date__lte=timezone.now(),
+            publication_status="published",
+        )
 
 class ResultsView(generic.DetailView):
     model = Space

@@ -5,10 +5,32 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from spaces.models import Address, CareHome, Space
+from spaces.models import Address, CareHome, RecurringAvailability, Space
 
 
 class SpaceModelTests(TestCase):
+    def test_publication_status_controls_public_visibility(self):
+        draft = Space(publication_status="draft", pub_date=timezone.now())
+
+        self.assertFalse(draft.is_public())
+
+    def test_recurring_availability_is_ordered_by_weekday_and_start_time(self):
+        space = create_space(name="Weekly space", days=-1)
+        late = RecurringAvailability.objects.create(
+            space=space,
+            weekday=2,
+            start_time="14:00",
+            end_time="16:00",
+        )
+        early = RecurringAvailability.objects.create(
+            space=space,
+            weekday=1,
+            start_time="09:00",
+            end_time="11:00",
+        )
+
+        self.assertEqual(list(space.recurring_availability.all()), [early, late])
+
     def test_was_published_recently_with_future_space(self):
         """
         was_published_recently() returns False for spaces whose pub_date

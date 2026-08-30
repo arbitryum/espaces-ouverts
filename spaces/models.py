@@ -96,6 +96,11 @@ class CareHome(models.Model):
         return address_details
 
 class Space(models.Model):
+    PUBLICATION_STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("published", "Published"),
+        ("archived", "Archived"),
+    ]
     STATUS_CHOICES = [
         ("available", "Available"),
         ("full", "Full"),
@@ -113,6 +118,12 @@ class Space(models.Model):
         default="available",
         help_text="Availability status of the space"
     )
+    publication_status = models.CharField(
+        max_length=20,
+        choices=PUBLICATION_STATUS_CHOICES,
+        default="published",
+        help_text="Controls whether this space appears in the public directory",
+    )
 
     def __str__(self):
         return self.name + " (" + self.care_home.name + ")"
@@ -124,6 +135,9 @@ class Space(models.Model):
     def get_first_image(self):
         """Returns the first image for this space, or None if no images exist."""
         return self.images.first()
+
+    def is_public(self):
+        return self.publication_status == "published" and self.status != "full"
 
 
 class SpaceImage(models.Model):
@@ -149,6 +163,35 @@ class SpaceImage(models.Model):
 
     def __str__(self):
         return f"{self.space.name} - Image {self.order}"
+
+
+class RecurringAvailability(models.Model):
+    WEEKDAY_CHOICES = [
+        (0, "Lundi"),
+        (1, "Mardi"),
+        (2, "Mercredi"),
+        (3, "Jeudi"),
+        (4, "Vendredi"),
+        (5, "Samedi"),
+        (6, "Dimanche"),
+    ]
+
+    space = models.ForeignKey(
+        Space,
+        on_delete=models.CASCADE,
+        related_name="recurring_availability",
+    )
+    weekday = models.PositiveSmallIntegerField(choices=WEEKDAY_CHOICES)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    notes = models.CharField(max_length=255, blank=True, default="")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["weekday", "start_time"]
+
+    def __str__(self):
+        return f"{self.space.name} - {self.get_weekday_display()}"
 
 
 class Address(models.Model):
