@@ -22,7 +22,9 @@ from django.urls import include, path
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("", include("home.urls")),
     path("spaces/", include("spaces.urls")),
+    path("coworking/", include("coworking.urls")),
 ]
 
 # Add debug tools only in DEBUG mode

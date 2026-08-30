@@ -185,6 +185,7 @@ uv lock
 ```text
 app/                  Django project configuration
 spaces/               Application code and models
+coworking/            Separate coworking application and public entry point
 theme/static_src/     Tailwind CSS source (Node.js + npm)
 static/               Generated CSS and static files
 bin/                  Deployment scripts

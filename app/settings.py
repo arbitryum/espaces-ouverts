@@ -43,7 +43,9 @@ SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 # Application definition
 
 INSTALLED_APPS = [
+    'home.apps.HomeConfig',
     'spaces.apps.SpacesConfig',
+    'coworking.apps.CoworkingConfig',
     'tailwind',
     'theme',
     'django.contrib.admin',
