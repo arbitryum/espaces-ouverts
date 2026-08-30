@@ -1,7 +1,7 @@
 import datetime
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -70,6 +70,19 @@ def create_space(
     return Space.objects.create(name=name, pub_date=time, care_home=care_home)
 
 class SpaceIndexViewTests(TestCase):
+    @override_settings(
+        STORAGES={
+            "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+            "staticfiles": {
+                "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+            },
+        }
+    )
+    def test_home_button_links_to_visitor_home(self):
+        response = self.client.get(reverse("spaces:index"))
+
+        self.assertContains(response, 'href="/"')
+
     def test_default_view_mode_is_list(self):
         create_space(name="Past space.", days=-1)
 
