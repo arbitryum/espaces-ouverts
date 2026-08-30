@@ -72,6 +72,12 @@ Seed the coworking directory with sample published and draft projects:
 python manage.py seed_coworking
 ```
 
+Add recurring availability examples to existing spaces:
+
+```sh
+python manage.py seed_availability
+```
+
 ## Start the project
 
 ### Terminal 1: Django development server

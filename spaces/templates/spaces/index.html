@@ -126,6 +126,14 @@
               <span class="block font-semibold mb-1">Nom espace</span>
               {{ space.name }}
             </p>
+            {% with recurring_slots=space.recurring_availability.all %}
+              {% if recurring_slots %}
+                <p class="mt-3 text-sm text-base-content/70">
+                  <span class="block font-semibold mb-1 text-base-content">Disponibilité récurrente</span>
+                  {{ recurring_slots|length }} créneau{{ recurring_slots|length|pluralize }} hebdomadaire{{ recurring_slots|length|pluralize }}
+                </p>
+              {% endif %}
+            {% endwith %}
 
             <!-- Footer Actions -->
             <div class="card-actions justify-center pt-4">

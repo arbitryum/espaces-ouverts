@@ -89,7 +89,7 @@ class IndexView(generic.ListView):
                 publication_status="published",
             )
             .select_related("care_home", "care_home__address_details")
-            .prefetch_related("images")
+            .prefetch_related("images", "recurring_availability")
             .order_by("-pub_date")
         )
 
@@ -216,7 +216,7 @@ class DetailView(generic.DetailView):
         return Space.objects.filter(
             pub_date__lte=timezone.now(),
             publication_status="published",
-        )
+        ).prefetch_related("images", "recurring_availability")
 
 class ResultsView(generic.DetailView):
     model = Space

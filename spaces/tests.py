@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from spaces.models import Address, CareHome, RecurringAvailability, Space
+from spaces.management.commands.seed_availability import SCHEDULES
 
 
 class SpaceModelTests(TestCase):
@@ -30,6 +31,33 @@ class SpaceModelTests(TestCase):
         )
 
         self.assertEqual(list(space.recurring_availability.all()), [early, late])
+
+    @override_settings(
+        STORAGES={
+            "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+            "staticfiles": {
+                "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+            },
+        }
+    )
+    def test_detail_displays_recurring_availability(self):
+        space = create_space(name="Calendar space", days=-1)
+        RecurringAvailability.objects.create(
+            space=space,
+            weekday=0,
+            start_time="09:30",
+            end_time="12:00",
+        )
+
+        response = self.client.get(reverse("spaces:detail", args=[space.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Lundi")
+        self.assertContains(response, "09:30")
+
+    def test_availability_seed_defines_examples(self):
+        self.assertIn("Le forum", SCHEDULES)
+        self.assertTrue(SCHEDULES["Le forum"])
 
     def test_was_published_recently_with_future_space(self):
         """
