@@ -11,7 +11,37 @@
         btn.classList.remove('bg-primary', 'w-6');
         btn.classList.add('bg-base-100/60', 'hover:bg-base-100/80', 'w-2');
       }
+      btn.setAttribute('aria-current', index === currentSlideIndex ? 'true' : 'false');
     });
+  }
+
+  // Keep the active dot synchronized with native scrolling, including touch swipes.
+  function updateCarouselFromScroll(carousel) {
+    const items = carousel.querySelectorAll('.carousel-item');
+    if (!items.length) return;
+
+    let currentSlideIndex = 0;
+    let smallestDistance = Infinity;
+    items.forEach((item, index) => {
+      const distance = Math.abs(item.offsetLeft - carousel.scrollLeft);
+      if (distance < smallestDistance) {
+        smallestDistance = distance;
+        currentSlideIndex = index;
+      }
+    });
+
+    updateCarouselButtons(carousel.dataset.spaceId, currentSlideIndex);
+  }
+
+  function watchCarouselScroll(carousel) {
+    let frameId = null;
+    carousel.addEventListener('scroll', () => {
+      if (frameId !== null) return;
+      frameId = requestAnimationFrame(() => {
+        updateCarouselFromScroll(carousel);
+        frameId = null;
+      });
+    }, { passive: true });
   }
 
   // Navigate carousel by direction (next/prev) with looping
@@ -80,6 +110,11 @@
         e.stopPropagation();
         navigateCarousel(this.dataset.carouselId, 'next');
       });
+    });
+
+    document.querySelectorAll('.space-carousel').forEach(carousel => {
+      watchCarouselScroll(carousel);
+      updateCarouselFromScroll(carousel);
     });
   }
 
